@@ -122,6 +122,7 @@ function(input, output, session) {
                           paste0('email="', input$email,'"')
           )
           
+          writeLines(paste0("proteowizard=", proteowizardDir), fileConn)
           writeLines(parameters, fileConn, sep = "\n")
           close(fileConn)
           
@@ -135,7 +136,7 @@ function(input, output, session) {
           } else {
             ssh = ssh_connect(ssh_host)
           }
-          ssh_info(ssh)
+          print(ssh)
           message(paste0("Files uploading to: ", hpcInputDir, " (ignore the %)"))
           
           ### Create directory on HPC

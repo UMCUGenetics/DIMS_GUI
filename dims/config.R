@@ -15,6 +15,7 @@ root = "Y:/Metabolomics/DIMS_pipeline/R_workspace_NvU"
 #root2 = "Y:/Metabolomics/Research Metabolomic Diagnostics/Metabolomics Projects"
 root2 = root
 
-### Base folders on HPC
+### Folders on HPC
 base = "/hpc/dbg_mz"
 scriptDir = "/production/DIMS"
+proteowizardDir = "/tools/proteowizard"
