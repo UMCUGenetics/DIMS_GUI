@@ -6,8 +6,8 @@ suppressPackageStartupMessages(library("shinyjs"))
 rm(list=ls())   
 
 ### Source functions and config file
-source("dims/config.R")
-source("dims/functions.R")
+source("src/config.R")
+source("src/functions.R")
 df = NULL
 
 ### Set workdir to location of this script

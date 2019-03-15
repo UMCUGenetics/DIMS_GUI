@@ -111,20 +111,23 @@ function(input, output, session) {
           
           ### Create settings.config
           fileConn = file(paste(tmpDir, "settings.config", sep = "/"))
-          parameters <- c(paste0("thresh_pos=", input$thresh_pos),
-                          paste0("thresh_neg=", input$thresh_neg),
-                          paste0("dims_thresh=", input$dims_thresh),
-                          paste0("trim=", input$trim),
-                          paste0("nrepl=", input$nrepl),
-                          paste0('normalization="', input$normalization,'"'),
-                          paste0("thresh2remove=", input$thresh2remove),
-                          paste0("resol=", input$resol),
-                          paste0('email="', input$email,'"')
+          parameters <- c(
+            paste("# Created by", commit, "on", format(Sys.time(), "%b %d %Y %X")),
+            paste0("thresh_pos=", input$thresh_pos),
+            paste0("thresh_neg=", input$thresh_neg),
+            paste0("dims_thresh=", input$dims_thresh),
+            paste0("trim=", input$trim),
+            paste0("nrepl=", input$nrepl),
+            paste0("normalization=", input$normalization),
+            paste0("thresh2remove=", input$thresh2remove),
+            paste0("resol=", input$resol),
+            paste0("email=", input$email),
+            paste0("proteowizard=", proteowizardDir)
           )
           
-          writeLines(paste0("proteowizard=", proteowizardDir), fileConn)
           writeLines(parameters, fileConn, sep = "\n")
           close(fileConn)
+          
           
           ### Create all the paths 
           hpcInputDir = paste(base, "raw_data", input$run_name, sep="/")
@@ -152,7 +155,7 @@ function(input, output, session) {
           ### Start the pipeline
           cmd = paste0("cd ", base, scriptDir, " && sh run.sh -n ", inputDirName)
           message(cmd)
-          #ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
+          ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
         
           ### Copy over the log file that was created when starting the pipeline
           scp_upload(ssh, "0-queueConversion", to = hpcLogDir)

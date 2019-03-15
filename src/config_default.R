@@ -19,3 +19,6 @@ root2 = root
 base = "/hpc/dbg_mz"
 scriptDir = "/production/DIMS"
 proteowizardDir = "/tools/proteowizard_3.0.19056-6b6b0a2b4"
+
+### Log git branch and number
+commit <- paste(system("git name-rev HEAD", intern = TRUE), system("git rev-parse HEAD", intern = TRUE))
