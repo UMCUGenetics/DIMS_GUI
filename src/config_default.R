@@ -8,12 +8,10 @@ ssh_key = "C:/Users/QExactive Plus/.ssh/hpc_nvanunen"
 mail = "n.vanunen@umcutrecht.nl"
 
 ### Root for raw data file selector  
-#root = "C:/Xcalibur/data/Research"
-root = "Y:/Metabolomics/DIMS_pipeline/R_workspace_NvU"
+root = "C:/Xcalibur/data/Research"
 
 ### Root for experimental design file selector (sample sheet)
-#root2 = "Y:/Metabolomics/Research Metabolomic Diagnostics/Metabolomics Projects"
-root2 = root
+root2 = "Y:/Metabolomics/Research Metabolomic Diagnostics/Metabolomics Projects"
 
 ### Folders on HPC
 base = "/hpc/dbg_mz"

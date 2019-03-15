@@ -7,7 +7,8 @@ function(input, output, session) {
     ### Start Select Raw File Location
     observeEvent(input$raw_file_location, {
       inputDirName <<- paste(as.vector(unlist(input$raw_file_location['path']))[-1], collapse = "/", sep="")
-      updateTextInput(session, "run_name", value = inputDirName)
+      updateTextInput(session, "run_name", value = gsub(" ","_",inputDirName))
+      
     })
     ### End Select Raw File Location
     
@@ -68,35 +69,10 @@ function(input, output, session) {
       } else if (input$run_name == '') {
         session$sendCustomMessage(type = "testmessage", message = "Enter a name for the run!")
       } else {
-        ### Make init.RData (repl.pattern)
-        sampleNames=as.vector(unlist(df$File_Name))
-        nsampgrps = length(sampleNames)/input$nrepl # number of individual biological samples
-        repl.pattern = NULL
-        if (input$nrepl == 3){
-          for (x in 1:nsampgrps) { repl.pattern <- c(repl.pattern, list(c(sampleNames[x*(input$nrepl)-2],sampleNames[x*input$nrepl-1],sampleNames[x*input$nrepl])))}
-        } else if (input$nrepl == 5){
-          for (x in 1:nsampgrps) { repl.pattern <- c(repl.pattern, list(c(sampleNames[x*(input$nrepl)-4],sampleNames[x*input$nrepl-3],sampleNames[x*input$nrepl-2],sampleNames[x*input$nrepl-1],sampleNames[x*input$nrepl])))}
-        }
         
-        groupNames=unique(as.vector(unlist(df$Sample_Name)))
-        names(repl.pattern) = groupNames
-        
-        save(repl.pattern, file=paste(tmpDir, "init.RData", sep="/")) 
-        
-        ### Save sample sheet
-        write.table(df[input$inCheckboxGroup,], file=paste(tmpDir, "sampleNames_out.txt", sep="/"), quote = FALSE, sep="\t",row.names = FALSE)
-        files=paste(root, inputDirName, paste(as.vector(unlist(df[input$inCheckboxGroup, 1])),"raw", sep="."), sep="/")
-        
-        output$samples = renderTable({ as.data.frame(files) })
-      
-        selectedSamples = df[input$inCheckboxGroup,]
-        save(selectedSamples, file=paste(tmpDir, "selectedSamples.RData", sep="/"))
-        remove = which(sampleNames %in% selectedSamples$File_Name)
-        rval = NULL
-        if (length(remove)>0) rval = removeFromRepl.pat(sampleNames[-remove], repl.pattern, groupNames, input$nrepl)
-        
-        repl.pattern=rval$pattern
-        save(repl.pattern, file=paste(tmpDir, "init.RData", sep="/"))
+        ### Create all the paths 
+        hpcInputDir = paste(base, "raw_data", input$run_name, sep="/")
+        hpcLogDir = paste(base, "processed", input$run_name, "logs", "queue", sep="/")
         
         ### Check samples with design
         samplesDesign = paste(as.vector(unlist(df[input$inCheckboxGroup, 1])), "raw", sep=".")
@@ -108,6 +84,36 @@ function(input, output, session) {
           session$sendCustomMessage(type = "testmessage",
                                     message = "Design and mzXML files differ!")
         } else {
+          
+          ### Make init.RData (repl.pattern)
+          sampleNames=as.vector(unlist(df$File_Name))
+          nsampgrps = length(sampleNames)/input$nrepl # number of individual biological samples
+          repl.pattern = NULL
+          if (input$nrepl == 3){
+            for (x in 1:nsampgrps) { repl.pattern <- c(repl.pattern, list(c(sampleNames[x*(input$nrepl)-2],sampleNames[x*input$nrepl-1],sampleNames[x*input$nrepl])))}
+          } else if (input$nrepl == 5){
+            for (x in 1:nsampgrps) { repl.pattern <- c(repl.pattern, list(c(sampleNames[x*(input$nrepl)-4],sampleNames[x*input$nrepl-3],sampleNames[x*input$nrepl-2],sampleNames[x*input$nrepl-1],sampleNames[x*input$nrepl])))}
+          }
+          
+          groupNames=unique(as.vector(unlist(df$Sample_Name)))
+          names(repl.pattern) = groupNames
+          
+          save(repl.pattern, file=paste(tmpDir, "init.RData", sep="/")) 
+          
+          ### Save sample sheet
+          write.table(df[input$inCheckboxGroup,], file=paste(tmpDir, "sampleNames_out.txt", sep="/"), quote = FALSE, sep="\t",row.names = FALSE)
+          files=paste(root, inputDirName, paste(as.vector(unlist(df[input$inCheckboxGroup, 1])),"raw", sep="."), sep="/")
+          
+          output$samples = renderTable({ as.data.frame(files) })
+          
+          selectedSamples = df[input$inCheckboxGroup,]
+          save(selectedSamples, file=paste(tmpDir, "selectedSamples.RData", sep="/"))
+          remove = which(sampleNames %in% selectedSamples$File_Name)
+          rval = NULL
+          if (length(remove)>0) rval = removeFromRepl.pat(sampleNames[-remove], repl.pattern, groupNames, input$nrepl)
+          
+          repl.pattern=rval$pattern
+          save(repl.pattern, file=paste(tmpDir, "init.RData", sep="/"))
           
           ### Create settings.config
           fileConn = file(paste(tmpDir, "settings.config", sep = "/"))
@@ -129,10 +135,6 @@ function(input, output, session) {
           close(fileConn)
           
           
-          ### Create all the paths 
-          hpcInputDir = paste(base, "raw_data", input$run_name, sep="/")
-          hpcLogDir = paste(base, "processed", input$run_name, "logs", "queue", sep="/")
-          
           ### Connect to HPC
           if (exists("ssh_key")) {
             ssh = ssh_connect(ssh_host, ssh_key)
@@ -140,34 +142,40 @@ function(input, output, session) {
             ssh = ssh_connect(ssh_host)
           }
           print(ssh)
-          message(paste0("Files uploading to: ", hpcInputDir, " (ignore the %)"))
           
           ### Create directory on HPC
-          ssh_exec_wait(ssh, paste0("mkdir -p ", hpcInputDir))
+          fail <- ssh_exec_wait(ssh, paste0("mkdir ", hpcInputDir))
+          if (fail == 1) {
+            session$sendCustomMessage(type = "testmessage",
+                                      message = "A directory with this name already exists on HPC!")
+          } else {
+            ### Copy over RAW data
+            inputDir = paste(root, inputDirName, sep="/")
+            message(paste0("Uploading files from ",inputDir ," to: ", hpcInputDir, " (ignore the %)"))
+            scp_upload(ssh, list.files(inputDir, full.names = TRUE), to = hpcInputDir)
+            
+            ### Copy over the tmp files (eg. init.RData, settings.config)
+            message(paste("Uploading files from", tmpDir, "to:", hpcInputDir))
+            scp_upload(ssh, list.files(tmpDir, full.names = TRUE), to = hpcInputDir)
+            
+            ### Start the pipeline
+            cmd = paste0("cd ", base, scriptDir, " && sh run.sh -n ", input$run_name)
+            message(paste("Starting the pipeline with:", cmd))
+            ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
           
-          ### Copy over RAW data
-          inputDir = paste(root, inputDirName, sep="/")
-          scp_upload(ssh, list.files(inputDir, full.names = TRUE), to = hpcInputDir)
+            ### Copy over the log file that was created when starting the pipeline
+            scp_upload(ssh, "0-queueConversion", to = hpcLogDir)
+            
+            ### Remove tmp dir
+            #unlink(tmpDir, recursive = TRUE)          
+            
+            ### Done
+            session$sendCustomMessage(type = "testmessage",
+                                      message = "Samples will be processed @HPC cluster. This will take several hours! You will recieve an email when finished.")
+            message("Done")
+            stopApp(returnValue = invisible())
           
-          ### Copy over the tmp files (eg. init.RData, settings.config)
-          scp_upload(ssh, list.files(tmpDir, full.names = TRUE), to = hpcInputDir)
-          
-          ### Start the pipeline
-          cmd = paste0("cd ", base, scriptDir, " && sh run.sh -n ", inputDirName)
-          message(cmd)
-          ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
-        
-          ### Copy over the log file that was created when starting the pipeline
-          scp_upload(ssh, "0-queueConversion", to = hpcLogDir)
-          
-          ### Remove tmp dir
-          unlink(tmpDir, recursive = TRUE)          
-          
-          ### Done
-          session$sendCustomMessage(type = "testmessage",
-                                    message = "Samples will be processed @HPC cluster. This will take several hours! You will recieve an email when finished.")
-          message("Done")
-          stopApp(returnValue = invisible())
+          }
         }
       }
     })
