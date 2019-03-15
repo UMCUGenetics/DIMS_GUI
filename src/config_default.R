@@ -11,7 +11,7 @@ mail = "n.vanunen@umcutrecht.nl"
 root = "C:/Xcalibur/data/Research"
 
 ### Root for experimental design file selector (sample sheet)
-root2 = "Y:/Metabolomics/Research Metabolomic Diagnostics/Metabolomics Projects"
+root2 = "Y:/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects"
 
 ### Folders on HPC
 base = "/hpc/dbg_mz"
