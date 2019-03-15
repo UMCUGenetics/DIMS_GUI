@@ -19,4 +19,4 @@ unlink(tmpDir, recursive = TRUE)
 dir.create(tmpDir, showWarnings = FALSE)
 
 ### Start
-runApp("dims")
+runApp("src")
