@@ -152,7 +152,9 @@ function(input, output, session) {
             ### Copy over RAW data
             inputDir = paste(root, inputDirName, sep="/")
             message(paste0("Uploading files from ",inputDir ," to: ", hpcInputDir, " (ignore the %)"))
-            scp_upload(ssh, list.files(inputDir, full.names = TRUE), to = hpcInputDir)
+            for (s in samplesDesign) {
+              scp_upload(ssh, paste(inputDir, s, sep="/"), to = hpcInputDir)
+            }
             
             ### Copy over the tmp files (eg. init.RData, settings.config)
             message(paste("Uploading files from", tmpDir, "to:", hpcInputDir))
@@ -171,7 +173,7 @@ function(input, output, session) {
             
             ### Done
             session$sendCustomMessage(type = "testmessage",
-                                      message = "Samples will be processed @HPC cluster. This will take several hours! You will recieve an email when finished.")
+                                      message = "Samples will be processed @HPC cluster. This will take several hours! You will receive an email when finished.")
             message("Done")
             stopApp(returnValue = invisible())
           
