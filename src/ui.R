@@ -26,20 +26,20 @@ fluidPage(
            
            fluidRow(
              column(6,  
-                    textInput("email", label = "UMC Email", value = mail),
-                    numericInput("nrepl", "Technical replicates", 3),
-                    selectInput("normalization", "Normalization", list("disabled", "total_IS", "total_ident", "total")),
-                    numericInput("trim", "Trim", 0.1),
-                    numericInput("resol", "Resolution", 140000),
-                    numericInput("dims_thresh", "Threshold DIMS", 100)
+                    textInput("email", "UMC Email", mail),
+                    numericInput("nrepl", "Technical replicates", nrepl),
+                    selectInput("normalization", "Normalization", normalization),
+                    numericInput("trim", "Trim", trim),
+                    numericInput("resol", "Resolution", resol)
              ),
              column(6,
-                    textInput("run_name", label = "Run Name", value = ""),
-                    selectInput("data_type", "Data Type", list("Plasma", "Blood Spots", "Research")),
+                    textInput("run_name", "Run Name", run_name),
+                    #selectInput("data_type", "Data Type", date_type),
                     #selectInput("thresh2remove", "Threshold to remove", list("1e+09 (plasma)", "5e+08 (blood spots)", "1e+08 (research (Mia))")),
-                    numericInput("thresh2remove", "Threshold Remove", 500000000),
-                    numericInput("thresh_pos", "Threshold positive", 2000),
-                    numericInput("thresh_neg", "Threshold negative", 2000)
+                    numericInput("thresh2remove", "Min Intensity Sum", thresh2remove),
+                    numericInput("dims_thresh", "Min Intensity Threshold", dims_thresh),
+                    numericInput("thresh_pos", "Max Intensity Positive Threshold", thresh_pos),
+                    numericInput("thresh_neg", "Max Intensity Negative Threshold", thresh_neg)
              )
            ),
            fluidRow(
