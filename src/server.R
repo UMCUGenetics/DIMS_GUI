@@ -89,15 +89,14 @@ function(input, output, session) {
           sampleNames=as.vector(unlist(df$File_Name))
           nsampgrps = length(sampleNames)/input$nrepl # number of individual biological samples
           repl.pattern = c()
-          tmp_list = c()
-          tmp = input$nrepl-1
-          for (x in 1:nsampgrps) {
-            for (i in tmp:0) {
-              tmp_list <- c(tmp_list, sampleNames[x*input$nrepl-i])
+          for (a in 1:nsampgrps) {
+            tmp = c()
+            for (b in input$nrepl:1) {
+              i = ((a*input$nrepl)-b)+1
+              tmp <- c(tmp, sampleNames[i])
             }
+            repl.pattern <- c(repl.pattern, list(tmp))
           }
-          repl.pattern <- c(repl.pattern, tmp_list)
-          
           groupNames=unique(as.vector(unlist(df$Sample_Name)))
           names(repl.pattern) = groupNames
           
