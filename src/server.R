@@ -88,12 +88,15 @@ function(input, output, session) {
           ### Make init.RData (repl.pattern)
           sampleNames=as.vector(unlist(df$File_Name))
           nsampgrps = length(sampleNames)/input$nrepl # number of individual biological samples
-          repl.pattern = NULL
-          if (input$nrepl == 3){
-            for (x in 1:nsampgrps) { repl.pattern <- c(repl.pattern, list(c(sampleNames[x*(input$nrepl)-2],sampleNames[x*input$nrepl-1],sampleNames[x*input$nrepl])))}
-          } else if (input$nrepl == 5){
-            for (x in 1:nsampgrps) { repl.pattern <- c(repl.pattern, list(c(sampleNames[x*(input$nrepl)-4],sampleNames[x*input$nrepl-3],sampleNames[x*input$nrepl-2],sampleNames[x*input$nrepl-1],sampleNames[x*input$nrepl])))}
+          repl.pattern = c()
+          tmp_list = c()
+          tmp = input$nrepl-1
+          for (x in 1:nsampgrps) {
+            for (i in tmp:0) {
+              tmp_list <- c(tmp_list, sampleNames[x*input$nrepl-i])
+            }
           }
+          repl.pattern <- c(repl.pattern, tmp_list)
           
           groupNames=unique(as.vector(unlist(df$Sample_Name)))
           names(repl.pattern) = groupNames
