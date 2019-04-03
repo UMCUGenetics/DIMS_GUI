@@ -149,6 +149,7 @@ function(input, output, session) {
               paste0("resol=", input$resol),
               paste0("email=", input$email),
               paste0("proteowizard=", proteowizardDir)
+              paste0("db=", db)
             )
             
             writeLines(parameters, fileConn, sep = "\n")
@@ -183,7 +184,7 @@ function(input, output, session) {
               
               if (run_pipeline) {
                 ### Start the pipeline
-                cmd = paste0("cd ", base, scriptDir, " && sh run.sh -n ", input$run_name)
+                cmd = paste0("cd ", scriptDir, " && sh run.sh -n ", input$run_name)
                 message(paste("Starting the pipeline with:", cmd))
                 ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
               
