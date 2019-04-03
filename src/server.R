@@ -86,7 +86,7 @@ function(input, output, session) {
         } else {
           
           ### Make init.RData (repl.pattern)
-          sampleNames=as.vector(unlist(df$File_Name))
+          sampleNames=trimws(as.vector(unlist(df$File_Name)))=
           nsampgrps = length(sampleNames)/input$nrepl # number of individual biological samples
           repl.pattern = c()
           for (a in 1:nsampgrps) {
@@ -97,7 +97,7 @@ function(input, output, session) {
             }
             repl.pattern <- c(repl.pattern, list(tmp))
           }
-          groupNames=unique(as.vector(unlist(df$Sample_Name)))
+          groupNames=unique(trimws(as.vector(unlist(df$Sample_Name))))
           names(repl.pattern) = groupNames
           
           save(repl.pattern, file=paste(tmpDir, "init.RData", sep="/")) 
@@ -139,14 +139,15 @@ function(input, output, session) {
           
           ### Connect to HPC
           if (exists("ssh_key")) {
-            ssh = ssh_connect(ssh_host, ssh_key)
+            #ssh = ssh_connect(ssh_host, ssh_key)
           } else {
-            ssh = ssh_connect(ssh_host)
+            #ssh = ssh_connect(ssh_host)
           }
-          print(ssh)
+          #print(ssh)
           
           ### Create directory on HPC
-          fail <- ssh_exec_wait(ssh, paste0("mkdir ", hpcInputDir))
+          #fail <- ssh_exec_wait(ssh, paste0("mkdir ", hpcInputDir))
+          fail <- 1
           if (fail == 1) {
             session$sendCustomMessage(type = "testmessage",
                                       message = "A directory with this name already exists on HPC!")
@@ -162,13 +163,15 @@ function(input, output, session) {
             message(paste("Uploading files from", tmpDir, "to:", hpcInputDir))
             scp_upload(ssh, list.files(tmpDir, full.names = TRUE), to = hpcInputDir)
             
-            ### Start the pipeline
-            cmd = paste0("cd ", base, scriptDir, " && sh run.sh -n ", input$run_name)
-            message(paste("Starting the pipeline with:", cmd))
-            ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
-          
-            ### Copy over the log file that was created when starting the pipeline
-            scp_upload(ssh, "0-queueConversion", to = hpcLogDir)
+            if (run_pipeline) {
+              ### Start the pipeline
+              cmd = paste0("cd ", base, scriptDir, " && sh run.sh -n ", input$run_name)
+              message(paste("Starting the pipeline with:", cmd))
+              ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
+            
+              ### Copy over the log file that was created when starting the pipeline
+              scp_upload(ssh, "0-queueConversion", to = hpcLogDir)
+            }
             
             ### Remove tmp dir
             #unlink(tmpDir, recursive = TRUE)          

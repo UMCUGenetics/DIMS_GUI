@@ -1,10 +1,13 @@
 library("ssh")
 
+### Settings
+run_pipeline=TRUE # put on FALSE if you solely want to upload data
+
 ### Connect to HPC
 ssh_host = "nvanunen@hpcsubmit.op.umcutrecht.nl"
 ssh_key = "C:/Users/QExactive Plus/.ssh/hpc_nvanunen"
 
-### Default parameters
+### Default parameters - for lists it defaults to the first one
 mail = "n.vanunen@umcutrecht.nl"
 run_name = ""
 nrepl = "3"
@@ -28,5 +31,5 @@ base = "/hpc/dbg_mz"
 scriptDir = "/production/DIMS"
 proteowizardDir = "/tools/proteowizard_3.0.19056-6b6b0a2b4"
 
-### Log git branch and number
+### Log git branch and commit ID
 commit <- paste(system("git name-rev HEAD", intern = TRUE), system("git rev-parse HEAD", intern = TRUE))
