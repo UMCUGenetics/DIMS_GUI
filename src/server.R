@@ -148,7 +148,7 @@ function(input, output, session) {
               paste0("thresh2remove=", input$thresh2remove),
               paste0("resol=", input$resol),
               paste0("email=", input$email),
-              paste0("proteowizard=", proteowizardDir)
+              paste0("proteowizard=", proteowizardDir),
               paste0("db=", db)
             )
             
