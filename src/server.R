@@ -72,6 +72,7 @@ function(input, output, session) {
         
         ### Create all the paths 
         hpcInputDir = paste(base, "raw_data", input$run_name, sep="/")
+        hpcOutputDir = paste(base, "processed", input$run_name, sep="/")
         hpcLogDir = paste(base, "processed", input$run_name, "logs", "queue", sep="/")
         
         ### Check samples with design
@@ -184,7 +185,7 @@ function(input, output, session) {
               
               if (run_pipeline) {
                 ### Start the pipeline
-                cmd = paste0("cd ", scriptDir, " && sh run.sh -n ", input$run_name)
+                cmd = paste("cd", scriptDir, "&& sh run.sh -i", hpcInputDir, "-o", hpcOutputDir)
                 message(paste("Starting the pipeline with:", cmd))
                 ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
               
