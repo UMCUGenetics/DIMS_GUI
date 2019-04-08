@@ -2,15 +2,27 @@ library("shiny")
 library("shinyFiles")
 suppressPackageStartupMessages(library("shinyjs"))
 
+cat("Doing application setup\n")
+
+onStop(function() {
+  cat("Doing application cleanup\n")
+  config <- NULL
+  functions <- NULL
+  rm(list=ls())
+  gc()
+})
+
 ### Set workdir to location of this script
 setwd(dirname(parent.frame(2)$ofile))
 
-### Clear all variables
+### Clear all variables from memory
 rm(list=ls())   
 
 ### Source functions and config file
-source("src/config.R")
-source("src/functions.R")
+config <- new.env()
+functions <- new.env()
+source("src/config.R", local=config)
+source("src/functions.R", local=functions)
 df = NULL
 
 ### Recreate tmp dir 
