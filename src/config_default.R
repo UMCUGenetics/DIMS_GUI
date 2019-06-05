@@ -14,6 +14,7 @@ base = "/hpc/dbg_mz"
 scriptDir = paste0(base, "/production/DIMS")
 proteowizardDir = paste0(base, "/tools/proteowizard_3.0.19056-6b6b0a2b4")
 db = paste0(base, "/tools/db/HMDB_add_iso_corrNaCl.RData")
+db2 = paste0(base, "/tools/db/HMDB_with_relevance.RData")
 
 ### Default job times
 
@@ -30,6 +31,7 @@ dims_thresh = 100
 thresh2remove = 500000000
 thresh_pos = 2000
 thresh_neg = 2000
+matrix = "DBS"
 
 
 ### Connect to HPC

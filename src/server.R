@@ -119,7 +119,6 @@ function(input, output, session) {
             }
             
             names(repl.pattern) = groupNamesUnique
-            save(repl.pattern, file=paste(tmpDir, "init.RData", sep="/")) 
             
             ### Save sample sheet
             write.table(df[input$inCheckboxGroup,], file=paste(tmpDir, "sampleNames_out.txt", sep="/"), quote = FALSE, sep="\t",row.names = FALSE)
@@ -149,8 +148,10 @@ function(input, output, session) {
               paste0("thresh2remove=", input$thresh2remove),
               paste0("resol=", input$resol),
               paste0("email=", input$email),
+              paste0("matrix=", config$matrix),
               paste0("proteowizard=", config$proteowizardDir),
-              paste0("db=", config$db)
+              paste0("db=", config$db),
+              paste0("db2=", config$db2)
             )
             
             writeLines(parameters, fileConn, sep = "\n")
