@@ -3,7 +3,7 @@ library("ssh")
 ### Settings
 run_pipeline=TRUE # put on FALSE if you solely want to upload data
 
-# Root for raw data file selector  
+# Root for raw data file selector
 root = "C:/Xcalibur/data/Research"
 
 # Root for experimental design file selector (sample sheet)
@@ -32,6 +32,7 @@ thresh2remove = 500000000
 thresh_pos = 2000
 thresh_neg = 2000
 matrix = "DBS"
+z_score = 0
 
 
 ### Connect to HPC
