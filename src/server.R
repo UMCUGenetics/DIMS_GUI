@@ -1,8 +1,8 @@
 function(input, output, session) {
   observe({
     
-    shinyDirChoose(input, "raw_file_location", roots = c(home=root))
-    shinyFileChoose(input, "experimental_design", roots = c(home=root2))
+    shinyDirChoose(input, "raw_file_location", roots = c(home=config$root))
+    shinyFileChoose(input, "experimental_design", roots = c(home=config$root2))
     
     ### Start Select Raw File Location
     observeEvent(input$raw_file_location, {
@@ -17,7 +17,7 @@ function(input, output, session) {
       
       if (!is.na(input$experimental_design['files'])) {
         file <- paste(as.vector(unlist(input$experimental_design['files'])), collapse = "/", sep="")
-        df <<- read.csv(paste0(root2, file),
+        df <<- read.csv(paste0(config$root2, file),
                         header = TRUE,
                         sep = "\t",
                         quote = "")
@@ -71,13 +71,13 @@ function(input, output, session) {
       } else {
         
         ### Create all the paths 
-        hpcInputDir = paste(base, "raw_data", input$run_name, sep="/")
-        hpcOutputDir = paste(base, "processed", input$run_name, sep="/")
-        hpcLogDir = paste(base, "processed", input$run_name, "logs", "queue", sep="/")
+        hpcInputDir = paste(config$base, "raw_data", input$run_name, sep="/")
+        hpcOutputDir = paste(config$base, "processed", input$run_name, sep="/")
+        hpcLogDir = paste(config$base, "processed", input$run_name, "logs", "queue", sep="/")
         
         ### Check samples with design
         samplesDesign = paste(as.vector(unlist(df[input$inCheckboxGroup, 1])), "raw", sep=".")
-        raw = list.files(path = paste(root, inputDirName, sep="/"), pattern = "raw")
+        raw = list.files(path = paste(config$root, inputDirName, sep="/"), pattern = "raw")
         index = which(samplesDesign %in% raw)
         
         
@@ -119,11 +119,10 @@ function(input, output, session) {
             }
             
             names(repl.pattern) = groupNamesUnique
-            save(repl.pattern, file=paste(tmpDir, "init.RData", sep="/")) 
             
             ### Save sample sheet
             write.table(df[input$inCheckboxGroup,], file=paste(tmpDir, "sampleNames_out.txt", sep="/"), quote = FALSE, sep="\t",row.names = FALSE)
-            files=paste(root, inputDirName, paste(as.vector(unlist(df[input$inCheckboxGroup, 1])),"raw", sep="."), sep="/")
+            files=paste(config$root, inputDirName, paste(as.vector(unlist(df[input$inCheckboxGroup, 1])),"raw", sep="."), sep="/")
             
             output$samples = renderTable({ as.data.frame(files) })
             
@@ -131,7 +130,7 @@ function(input, output, session) {
             save(selectedSamples, file=paste(tmpDir, "selectedSamples.RData", sep="/"))
             remove = which(sampleNames %in% selectedSamples$File_Name)
             rval = NULL
-            if (length(remove)>0) rval = removeFromRepl.pat(sampleNames[-remove], repl.pattern, groupNamesUnique, input$nrepl)
+            if (length(remove)>0) rval = functions$removeFromRepl.pat(sampleNames[-remove], repl.pattern, groupNamesUnique, input$nrepl)
             
             repl.pattern=rval$pattern
             save(repl.pattern, file=paste(tmpDir, "init.RData", sep="/"))
@@ -139,7 +138,7 @@ function(input, output, session) {
             ### Create settings.config
             fileConn = file(paste(tmpDir, "settings.config", sep = "/"))
             parameters <- c(
-              paste("# Created by", commit, "on", format(Sys.time(), "%b %d %Y %X")),
+              paste("# Created by", config$commit, "on", format(Sys.time(), "%b %d %Y %X")),
               paste0("thresh_pos=", input$thresh_pos),
               paste0("thresh_neg=", input$thresh_neg),
               paste0("dims_thresh=", input$dims_thresh),
@@ -149,8 +148,10 @@ function(input, output, session) {
               paste0("thresh2remove=", input$thresh2remove),
               paste0("resol=", input$resol),
               paste0("email=", input$email),
-              paste0("proteowizard=", proteowizardDir),
-              paste0("db=", db)
+              paste0("matrix=", config$matrix),
+              paste0("proteowizard=", config$proteowizardDir),
+              paste0("db=", config$db),
+              paste0("db2=", config$db2)
             )
             
             writeLines(parameters, fileConn, sep = "\n")
@@ -159,9 +160,9 @@ function(input, output, session) {
             
             ### Connect to HPC
             if (exists("ssh_key")) {
-              ssh = ssh_connect(ssh_host, ssh_key)
+              ssh = ssh_connect(config$ssh_host, config$ssh_key)
             } else {
-              ssh = ssh_connect(ssh_host)
+              ssh = ssh_connect(config$ssh_host)
             }
             print(ssh)
             
@@ -173,7 +174,7 @@ function(input, output, session) {
                                         message = "A directory with this name already exists on HPC!")
             } else {
               ### Copy over RAW data
-              inputDir = paste(root, inputDirName, sep="/")
+              inputDir = paste(config$root, inputDirName, sep="/")
               message(paste0("Uploading files from ",inputDir ," to: ", hpcInputDir, " (ignore the %)"))
               for (s in samplesDesign) {
                 scp_upload(ssh, paste(inputDir, s, sep="/"), to = hpcInputDir)
@@ -183,9 +184,9 @@ function(input, output, session) {
               message(paste("Uploading files from", tmpDir, "to:", hpcInputDir))
               scp_upload(ssh, list.files(tmpDir, full.names = TRUE), to = hpcInputDir)
               
-              if (run_pipeline) {
+              if (config$run_pipeline) {
                 ### Start the pipeline
-                cmd = paste("cd", scriptDir, "&& sh run.sh -i", hpcInputDir, "-o", hpcOutputDir)
+                cmd = paste("cd", config$scriptDir, "&& sh run.sh -i", hpcInputDir, "-o", hpcOutputDir)
                 message(paste("Starting the pipeline with:", cmd))
                 ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
               
@@ -195,11 +196,10 @@ function(input, output, session) {
               
               ### Remove tmp dir
               #unlink(tmpDir, recursive = TRUE)          
-              
+           
               ### Done
               session$sendCustomMessage(type = "testmessage",
                                         message = "Samples will be processed @HPC cluster. This will take several hours! You will receive an email when finished.")
-              message("Done")
               stopApp(returnValue = invisible())
             }
           }
