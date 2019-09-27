@@ -36,7 +36,7 @@ z_score = 0
 
 
 ### Connect to HPC
-ssh_host = "nvanunen@hpcsubmit.op.umcutrecht.nl"
+ssh_host = "nvanunen@hpct01.op.umcutrecht.nl"
 ssh_key = "C:/Users/QExactive Plus/.ssh/hpc_nvanunen"
 
 
