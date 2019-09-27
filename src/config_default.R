@@ -12,7 +12,7 @@ root2 = "Y:/Metabolomics/Research Metabolic Diagnostics/Metabolomics Projects"
 ### Folders on HPC
 base = "/hpc/dbg_mz"
 scriptDir = paste0(base, "/production/DIMS")
-proteowizardDir = paste0(base, "/tools/proteowizard_3.0.19056-6b6b0a2b4")
+proteowizard = paste0(base, "/tools/proteowizard_3.0.19252-aa45583de")
 db = paste0(base, "/tools/db/HMDB_add_iso_corrNaCl.RData")
 db2 = paste0(base, "/tools/db/HMDB_with_relevance.RData")
 
