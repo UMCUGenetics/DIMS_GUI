@@ -1,5 +1,9 @@
 library("shiny")
 library("shinyFiles")
+library("DT")
+library("ssh")
+library("shinydashboard")
+
 suppressPackageStartupMessages(library("shinyjs"))
 
 cat("Doing application setup\n")

@@ -1,68 +1,67 @@
 function(input, output, session) {
-  observe({
-    
-    shinyDirChoose(input, "raw_file_location", roots = c(home=config$root))
-    shinyFileChoose(input, "experimental_design", roots = c(home=config$root2))
-    
-    ### Start Select Raw File Location
-    observeEvent(input$raw_file_location, {
-      inputDirName <<- paste(as.vector(unlist(input$raw_file_location['path']))[-1], collapse = "/", sep="")
-      updateTextInput(session, "run_name", value = gsub(" ","_",inputDirName))
-      
+  shinyDirChoose(input, "input_folder", roots = c(home = config$root), filetypes=c('raw'))
+  path1 <- reactive({
+    return(print(parseDirPath(volumes, input$input_folder)))
+  })
+  
+  observe({  
+    ### Start Select Sample Sheet
+    datasetInput <- reactive({
+      # input$samplesheet will be NULL initially. After the user selects
+      # and uploads a file, it will be a data frame with 'name',
+      # 'size', 'type', and 'datapath' columns. The 'datapath'
+      # column will contain the local filenames where the data can be found.
+      inFile <- input$samplesheet
+      if (is.null(inFile))
+        return(NULL)
+      read.csv(inFile$datapath, 
+               header = TRUE,
+               sep = "\t",
+               quote = "")
     })
-    ### End Select Raw File Location
     
-    ### Start Select Experimental Design
-    observeEvent(input$experimental_design, {
-      
-      if (!is.na(input$experimental_design['files'])) {
-        file <- paste(as.vector(unlist(input$experimental_design['files'])), collapse = "/", sep="")
-        df <<- read.csv(paste0(config$root2, file),
-                        header = TRUE,
-                        sep = "\t",
-                        quote = "")
-        
-        x=1:dim(df)[1]
-        names(x)=df$Sample_Name
-        updateCheckboxGroupInput(session, inputId = "inCheckboxGroup", choices = as.list(x), selected = as.list(x))
-      }
-    })
-    ### End Select Experimental Design
+    df <- datasetInput()
+    if (!is.null(df)) df$File_Found = FALSE
     
-    ### Start select all
-    observeEvent(input$check_all, {
-      if (length(df) > 0) {
-        x=1:dim(df)[1]
-        names(x)=df$Sample_Name
-        if (length(input$inCheckboxGroup) > 0) {
-          updateCheckboxGroupInput(session, "inCheckboxGroup", choices = as.list(x), selected = NULL)
-        } else {
-          updateCheckboxGroupInput(session, "inCheckboxGroup", choices = as.list(x), selected = as.list(x))
+    output$table = DT::renderDataTable(df, 
+                                       server = TRUE,
+                                       selection = list(mode = 'multiple', 
+                                                        selected = rownames(df)))
+    ### End Select Sample Sheet
+    
+    
+    ### Start Select Input Folder
+    observeEvent(input$input_folder, {
+      input_folder_name <- paste(as.vector(unlist(input$input_folder['path']))[-1], collapse = "/", sep="")
+      if (input_folder_name != '') {
+        if (!is.null(df)) {
+          ### Set Run Name parameter
+          updateTextInput(session, "run_name", value = gsub(" ", "_", input_folder_name))
+          
+          ### Check files with sample sheet
+          files <- list.files(path = paste(config$root, input_folder_name, sep="/"), pattern = ".raw$")
+          files <- gsub(files, pattern=".raw$", replacement="")
+          df$File_Found <- df[,1] %in% files
+          
+          ### Update table based on which files from the sample sheet were in the selected folder
+          output$table = DT::renderDataTable(df, 
+                                             server = TRUE,
+                                             selection = list(mode = 'multiple', 
+                                                              selected = input$table_rows_selected))
         }
       }
     })
-    ### End select all
+    ### End Select Input Folder
     
-    ### Start check individual
-    observeEvent(input$inCheckboxGroup, {
-      output$contents = renderTable(df[input$inCheckboxGroup,][1], 
-                                    striped = TRUE, 
-                                    hover = TRUE, 
-                                    colnames = FALSE)
-      if (is.null(input$inCheckboxGroup)) {
-        updateActionButton(session, "check_all", label = "Select All")
-      } else {
-        updateActionButton(session, "check_all", label = "Deselect All")
-      }
-    }, ignoreNULL = FALSE)
-    ### End check individual 
+    #text <- paste(length(which(df$File_Found == FALSE)), "out of the", length(input$table_rows_selected), "selected .raw files were not found in the selected directory.")
+    #output$test <- renderText(text)
     
     ### Start run
     observeEvent(input$run, {
       ### Check if there is input
-      if (is.na(input$raw_file_location['path'])) {
+      if (is.na(input$input_folder['path'])) {
         session$sendCustomMessage(type = "testmessage", message = "Choose a file location!")
-      } else if (is.na(input$experimental_design['files'])) {
+      } else if (is.na(input$samplesheet['files'])) {
         session$sendCustomMessage(type = "testmessage", message = "Choose an experimental design!")
       } else if (input$email == '') {
         session$sendCustomMessage(type = "testmessage", message = "Enter your email!")
@@ -87,9 +86,9 @@ function(input, output, session) {
         } else {
           
           ### Make init.RData (repl.pattern)
-          sampleNames=trimws(as.vector(unlist(df$File_Name)))
+          sampleNames=trimws(as.vector(unlist(df[,1])))
           nsampgrps = length(sampleNames)/input$nrepl # number of individual biological samples
-          groupNames=trimws(as.vector(unlist(df$Sample_Name)))
+          groupNames=trimws(as.vector(unlist(df[,2])))
           groupNamesUnique=unique(groupNames)
           wrongTechRepCount = FALSE
           for (x in groupNamesUnique) {
@@ -190,14 +189,14 @@ function(input, output, session) {
                 cmd = paste("cd", config$scriptDir, "&& sh run.sh -i", hpcInputDir, "-o", hpcOutputDir)
                 message(paste("Starting the pipeline with:", cmd))
                 ssh_exec_wait(ssh, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
-              
+                
                 ### Copy over the log file that was created when starting the pipeline
                 scp_upload(ssh, "0-queueConversion", to = hpcLogDir)
               }
               
               ### Remove tmp dir
               #unlink(tmpDir, recursive = TRUE)          
-           
+              
               ### Done
               session$sendCustomMessage(type = "testmessage",
                                         message = "Samples will be processed @HPC cluster. This will take several hours! You will receive an email when finished.")
