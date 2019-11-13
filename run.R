@@ -1,10 +1,8 @@
 library("shiny")
 library("shinyFiles")
+library("shinydashboard")
 library("DT")
 library("ssh")
-library("shinydashboard")
-
-suppressPackageStartupMessages(library("shinyjs"))
 
 cat("Doing application setup\n")
 
@@ -27,12 +25,11 @@ config <- new.env()
 functions <- new.env()
 source("src/config.R", local=config)
 source("src/functions.R", local=functions)
-df = NULL
 
 ### Recreate tmp dir 
-tmpDir = paste(getwd(), "tmp", sep="/")
-unlink(tmpDir, recursive = TRUE)
-dir.create(tmpDir, showWarnings = FALSE)
+tmp_dir = paste(getwd(), "tmp", sep="/")
+unlink(tmp_dir, recursive = TRUE)
+dir.create(tmp_dir, showWarnings = FALSE)
 
 ### Start
 runApp("src")
