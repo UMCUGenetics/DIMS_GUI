@@ -244,26 +244,40 @@ function(input, output, session) {
     ssh_submit <- ssh_connect(paste0(input$login,"@",config$ssh_submit), passwd = input$password)
     ssh_transfer <- ssh_connect(paste0(input$login,"@",config$ssh_transfer), passwd = input$password)
     
+    ssh_exec_wait(ssh_submit, paste("mkdir", hpc_input_dir))
+    
     ### Copy over RAW data
     input_folder_name <- paste(as.vector(unlist(input$input_folder['path']))[-1], collapse = "/", sep="")
     input_dir = paste(config$root, input_folder_name, sep = "/")
-    cat(paste0("Uploading files from ", input_dir, " to: ", hpc_input_dir, " (ignore the %)"))
-    for (rep in t_reps) {
-      scp_upload(ssh_transfer, paste(input_dir, s, sep="/"), to = hpc_input_dir)
-    }
+    cat(paste0("Uploading files from ", input_dir, " to: ", hpc_input_dir, " (ignore the %)\n"))
+    
+    scp_upload(ssh_transfer, 
+               list.files(path = input_dir, pattern = ".raw$", full.names = TRUE), 
+               to = hpc_input_dir)
+    #for (rep in t_reps) {
+    #  scp_upload(ssh_transfer, paste0(input_dir, "/", rep, ".raw"), to = hpc_input_dir)
+    #}
     
     ### Copy over the tmp files (init.RData, settings.config)
-    cat(paste("Uploading files from", tmp_dir, "to:", hpc_input_dir))
-    scp_upload(ssh_transfer, list.files(tmp_dir, full.names = TRUE), to = hpc_input_dir)
+    cat(paste("Uploading files from", tmp_dir, "to:", hpc_input_dir, "\n"))
+    scp_upload(ssh_transfer, 
+               list.files(tmp_dir, full.names = TRUE), 
+               to = hpc_input_dir)
     
     if (config$run_pipeline) {
       ### Start the pipeline
-      cmd = paste("sh", config$script_dir, "/run.sh -i", hpc_input_dir, "-o", hpc_output_dir)
-      cat(paste("Starting the pipeline with:", cmd))
-      ssh_exec_wait(ssh_submit, cmd, std_out = "0-queueConversion", std_err="0-queueConversion")
+      cmd = paste("cd", config$script_dir, "&& sh run.sh -i", hpc_input_dir, "-o", hpc_output_dir)
+      cat(paste("Starting the pipeline with:", cmd, "\n"))
+      ssh_exec_wait(ssh_submit, 
+                    cmd, 
+                    std_out = paste(tmp_dir, "0-queueConversion", sep="/"), 
+                    std_err = paste(tmp_dir, "0-queueConversion", sep="/"))
+      
       
       ### Copy over the log file that was created when starting the pipeline
-      scp_upload(ssh_transfer, "0-queueConversion", to = hpc_log_dir)
+      scp_upload(ssh_transfer, 
+                 paste(tmp_dir, "0-queueConversion", sep="/"), 
+                 to = hpc_log_dir)
     }
     
     ### Done
