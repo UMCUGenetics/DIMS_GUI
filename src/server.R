@@ -77,27 +77,27 @@ function(input, output, session) {
     
     # check 1 : Selected samplesheet.
     if (is.null(input$samplesheet)) {
-      output$check1 <- renderText({ "No" })
+      output$check1 <- renderText({"No"})
       passed = FALSE
     } else {
-      output$check1 <- renderText({ "Yes" })
+      output$check1 <- renderText({"Yes"})
     }
     
     # check 2 : Selected data folder.
     if (is.na(input$input_folder['path'])) {
-      output$check2 <- renderText({ "No" })
+      output$check2 <- renderText({"No"})
       passed = FALSE
     } else {
-      output$check2 <- renderText({ "Yes" })
+      output$check2 <- renderText({"Yes"})
     }
     
     # check 3 : All selected samples were found in data folder.
     selected_samples <- sampleSheet()[input$table_rows_selected,]
     if (is.null(sampleSheet()) || FALSE %in% selected_samples$File_Found) {
-      output$check3 <- renderText({ "No" })
+      output$check3 <- renderText({"No"})
       passed = FALSE
     } else {
-      output$check3 <- renderText({ "Yes" })
+      output$check3 <- renderText({"Yes"})
     }
     
     # check 4 : Every sample has the correct amount of technical replicates.
@@ -110,10 +110,10 @@ function(input, output, session) {
       }
     }
     if (length(t_reps) == 0 || wrong_t_rep_count || length(t_reps) / input$nrepl != length(unique(b_reps))) {
-      output$check4 <- renderText({ "No" })
+      output$check4 <- renderText({"No"})
       passed = FALSE
     } else {
-      output$check4 <- renderText({ "Yes" })
+      output$check4 <- renderText({"Yes"})
     }
     
     # check 5 : Parameters 
@@ -121,19 +121,19 @@ function(input, output, session) {
         input$password == '' ||
         input$email == '' ||
         input$run_name == '') {
-      output$check5 <- renderText({ "No" })
+      output$check5 <- renderText({"No"})
       passed = FALSE
     } else {
-      output$check5 <- renderText({ "Yes" })
+      output$check5 <- renderText({"Yes"})
     }
     
     # check 6 : HPC submit node
     #cat(paste0("\nConnecting to ", input$login,"@",config$ssh_submit))
     tryCatch({
       ssh_submit <- ssh_connect(paste0(input$login,"@",config$ssh_submit), passwd = input$password)
-      output$check6 <- renderText({ "Yes" })
+      output$check6 <- renderText({"Yes"})
     }, error = function(e) {
-      output$check6 <- renderText({ "No" })
+      output$check6 <- renderText({"No"})
       passed = FALSE
     })
     
@@ -142,9 +142,9 @@ function(input, output, session) {
     tryCatch({
       ssh_transfer <- ssh_connect(paste0(input$login,"@",config$ssh_transfer), passwd = input$password)
       ssh_disconnect(ssh_transfer)
-      output$check7 <- renderText({ "Yes" })
+      output$check7 <- renderText({"Yes"})
     }, error = function(e) {
-      output$check7 <- renderText({ "No" })
+      output$check7 <- renderText({"No"})
       passed = FALSE
     })
     
@@ -157,25 +157,25 @@ function(input, output, session) {
       # check 8 : raw data folder
       fail <- ssh_exec_wait(ssh_submit, paste0("if [ -d ", hpc_input_dir," ]; then rmdir ", hpc_input_dir,"; fi"))
       if (fail > 0) {
-        output$check8 <- renderText({ "No" })
+        output$check8 <- renderText({"No"})
         passed = FALSE
       } else {
-        output$check8 <- renderText({ "Yes" })
+        output$check8 <- renderText({"Yes"})
       }
       
       # check 9 : processed data folder
       fail <- ssh_exec_wait(ssh_submit, paste0("if [ -d ", hpc_output_dir," ]; then rmdir ", hpc_output_dir,"; fi"))
       if (fail > 0) {
-        output$check9 <- renderText({ "No" })
+        output$check9 <- renderText({"No"})
         passed = FALSE
       } else {
-        output$check9 <- renderText({ "Yes" })
+        output$check9 <- renderText({"Yes"})
       }
       
       ssh_disconnect(ssh_submit)
     } else {
-      output$check8 <- renderText({ "No" })
-      output$check9 <- renderText({ "No" })
+      output$check8 <- renderText({"No"})
+      output$check9 <- renderText({"No"})
       passed = FALSE
     }
     
@@ -201,6 +201,7 @@ function(input, output, session) {
     selected_samples <- sampleSheet()[input$table_rows_selected,]
     t_reps <- trimws(selected_samples[,1]) # technical replicates / samples, usually 3 per biological replicate
     b_reps <- trimws(selected_samples[,2]) # biological replicates / patient
+    b_reps <- gsub('[^-.[:alnum:]]', '_', b_reps)
     
     repl.pattern = c()
     for (a in 1:length(unique(b_reps))) {  # number of individual biological samples
@@ -212,10 +213,10 @@ function(input, output, session) {
       repl.pattern <- c(repl.pattern, list(tmp))
     }
     names(repl.pattern) = unique(b_reps)
-    save(repl.pattern, file=paste(tmp_dir, "init.RData", sep="/"))
+    save(repl.pattern, file = paste(tmp_dir, "init.RData", sep = "/"), version = 2)
     
     ### Save sample sheet
-    write.table(selected_samples, file=paste(tmp_dir, "sampleNames_out.txt", sep="/"), quote = FALSE, sep="\t",row.names = FALSE)
+    write.table(selected_samples, file = paste(tmp_dir, "sampleNames_out.txt", sep = "/"), quote = FALSE, sep= "\t", row.names = FALSE)
     
     ### Create settings.config
     file_con = file(paste(tmp_dir, "settings.config", sep = "/"))
@@ -227,6 +228,7 @@ function(input, output, session) {
       paste0("trim=", input$trim),
       paste0("nrepl=", input$nrepl),
       #paste0("normalization=", input$normalization),
+      paste0("normalization=", "disabled"), # temporary
       paste0("thresh2remove=", input$thresh2remove),
       paste0("resol=", input$resol),
       paste0("email=", input$email),
