@@ -12,6 +12,7 @@ onStop(function() {
   functions <- NULL
   rm(list=ls())
   gc()
+  cat("DONE!")
 })
 
 ### Set workdir to location of this script

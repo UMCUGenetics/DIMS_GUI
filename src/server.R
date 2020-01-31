@@ -128,8 +128,8 @@ function(input, output, session) {
     }
     
     # check 6 : HPC submit node
-    #cat(paste0("\nConnecting to ", input$login,"@",config$ssh_submit))
     tryCatch({
+      cat("Connecting to:", config$ssh_submit, "...\n")
       ssh_submit <- ssh_connect(paste0(input$login,"@",config$ssh_submit), passwd = input$password)
       output$check6 <- renderText({"Yes"})
     }, error = function(e) {
@@ -138,9 +138,10 @@ function(input, output, session) {
     })
     
     # check 7 : HPC transfer node
-    #cat(paste0("\nConnecting to ", input$login,"@",config$ssh_transfer))
     tryCatch({
+      cat("Connecting to:", config$ssh_transfer, "...\n")
       ssh_transfer <- ssh_connect(paste0(input$login,"@",config$ssh_transfer), passwd = input$password)
+      cat("Disconnecting from:", config$ssh_transfer, "...\n\n")
       ssh_disconnect(ssh_transfer)
       output$check7 <- renderText({"Yes"})
     }, error = function(e) {
@@ -172,6 +173,7 @@ function(input, output, session) {
         output$check9 <- renderText({"Yes"})
       }
       
+      cat("Disconnecting from:", config$ssh_submit, "...\n\n")
       ssh_disconnect(ssh_submit)
     } else {
       output$check8 <- renderText({"No"})
@@ -242,50 +244,63 @@ function(input, output, session) {
     writeLines(parameters, file_con, sep = "\n")
     close(file_con)
     
-    ### Connect to HPC
+    ### Connect to submit server and make the raw data folder
+    cat("Connecting to:", config$ssh_submit, "...\n")
     ssh_submit <- ssh_connect(paste0(input$login,"@",config$ssh_submit), passwd = input$password)
+    cat("Making folder", hpc_input_dir, "...\n")
+    ssh_exec_wait(ssh_submit, paste("mkdir", hpc_input_dir))
+    cat("Disconnecting from:", config$ssh_submit, "...\n\n")
+    ssh_disconnect(ssh_submit)
+    
+    ### Connect to transfer server
+    cat("Connecting to:", config$ssh_transfer, "...\n")
     ssh_transfer <- ssh_connect(paste0(input$login,"@",config$ssh_transfer), passwd = input$password)
     
-    ssh_exec_wait(ssh_submit, paste("mkdir", hpc_input_dir))
-    
-    ### Copy over RAW data
+    ### Transfer over RAW data
     input_folder_name <- paste(as.vector(unlist(input$input_folder['path']))[-1], collapse = "/", sep="")
     input_dir = paste(config$root, input_folder_name, sep = "/")
-    cat(paste0("Uploading files from ", input_dir, " to: ", hpc_input_dir, " (ignore the %)\n"))
+    cat("Copying files from", input_dir, "to:", hpc_input_dir, "... (ignore the %)\n")
     
     scp_upload(ssh_transfer, 
                list.files(path = input_dir, pattern = ".raw$", full.names = TRUE), 
                to = hpc_input_dir)
-    #for (rep in t_reps) {
-    #  scp_upload(ssh_transfer, paste0(input_dir, "/", rep, ".raw"), to = hpc_input_dir)
-    #}
     
-    ### Copy over the tmp files (init.RData, settings.config)
-    cat(paste("Uploading files from", tmp_dir, "to:", hpc_input_dir, "\n"))
+    ### Transfer over the tmp files to raw data folder (init.RData, settings.config)
+    cat("Copying files from", tmp_dir, "to:", hpc_input_dir, "...\n")
     scp_upload(ssh_transfer, 
                list.files(tmp_dir, full.names = TRUE), 
                to = hpc_input_dir)
     
+    ### Disconnect transfer server
+    cat("Disconnecting from:", config$ssh_transfer, "...\n\n")
+    ssh_disconnect(ssh_transfer)
+    
     if (config$run_pipeline) {
       ### Start the pipeline
+      cat("Connecting to:", config$ssh_submit, "...\n")
+      ssh_submit <- ssh_connect(paste0(input$login,"@",config$ssh_submit), passwd = input$password)
       cmd = paste("cd", config$script_dir, "&& sh run.sh -i", hpc_input_dir, "-o", hpc_output_dir)
-      cat(paste("Starting the pipeline with:", cmd, "\n"))
+      cat("Starting the pipeline with:", cmd, "...\n")
       ssh_exec_wait(ssh_submit, 
                     cmd, 
                     std_out = paste(tmp_dir, "0-queueConversion", sep="/"), 
                     std_err = paste(tmp_dir, "0-queueConversion", sep="/"))
+      cat("Disconnecting from:", config$ssh_submit, "...\n\n")
+      ssh_disconnect(ssh_submit)
       
       
       ### Copy over the log file that was created when starting the pipeline
+      cat("Connecting to:", config$ssh_transfer, "...\n")
+      ssh_transfer <- ssh_connect(paste0(input$login,"@",config$ssh_transfer), passwd = input$password)
+      cat("Copying over log file to:", hpc_log_dir, "...\n")
       scp_upload(ssh_transfer, 
                  paste(tmp_dir, "0-queueConversion", sep="/"), 
                  to = hpc_log_dir)
+      cat("Disconnecting from:", config$ssh_transfer, "...\n\n")
+      ssh_disconnect(ssh_transfer)
     }
     
     ### Done
-    ssh_disconnect(ssh_submit)
-    ssh_disconnect(ssh_transfer)
-    
     stopApp(returnValue = invisible())
   })
   ### End run
