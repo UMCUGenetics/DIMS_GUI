@@ -1,69 +1,114 @@
-library("shinythemes")
 
-fluidPage(
-  theme = shinytheme("paper"),
-  singleton(tags$head(tags$script(src = "message-handler.js"))), 
-  #shinythemes::themeSelector(), 
-  
-  fluidRow(
-    column(6, # left 
-           titlePanel("DIMS pipeline"),
-           
-           br(), br(),
-           fluidRow(
-             column(8, p(tags$b("1) Choose raw file location..."))),
-             column(4, shinyDirButton("raw_file_location", "Browse...", "1) Choose raw file location..."))
-           ),
-           
-           br(), 
-           fluidRow(
-             column(8, p(tags$b("2) Upload experimental design..."))),
-             column(4, shinyFilesButton("experimental_design", "Browse...", "2) Upload experimental design...", multiple=FALSE))
-           ),
-           
-           br(),
-           p(tags$b("4) Select parameters...")),
-           
-           fluidRow(
-             column(6,  
-                    textInput("email", "UMC Email", config$mail),
-                    numericInput("nrepl", "Technical replicates", config$nrepl),
-                    selectInput("normalization", "Normalization", config$normalization),
-                    numericInput("trim", "Trim", config$trim),
-                    numericInput("resol", "Resolution", config$resol)
-             ),
-             column(6,
-                    textInput("run_name", "Run Name", config$run_name),
-                    #selectInput("data_type", "Data Type", config$data_type),
-                    #selectInput("thresh2remove", "Threshold to remove", list("1e+09 (plasma)", "5e+08 (blood spots)", "1e+08 (research (Mia))")),
-                    numericInput("thresh2remove", "Min Intensity Sum", config$thresh2remove),
-                    numericInput("dims_thresh", "Min Intensity Threshold", config$dims_thresh),
-                    numericInput("thresh_pos", "Max Intensity Positive Threshold", config$thresh_pos),
-                    numericInput("thresh_neg", "Max Intensity Negative Threshold", config$thresh_neg)
-             )
-           ),
-           fluidRow(
-             column(8, p(tags$b("5) Start the pipeline..."))),
-             column(4, actionButton("run", "Run", class = "btn-success")))
-    ),
-    column(6, # right
-           br(),
-           wellPanel(style = "overflow-y:scroll; max-height: 700px",
-                     useShinyjs(),
-                     fluidPage(
-                       br(),   
+
+dashboardPage(
+  dashboardHeader(title = "DIMS Pipeline"),
+  dashboardSidebar(
+    sidebarMenu(
+      menuItem("Step 1: Select Samples", tabName = "step1", icon = icon("vial")),
+      menuItem("Step 2: Set Settings", tabName = "step2", icon = icon("sliders-h")),
+      menuItem("Step 3: Set Advanced Settings", tabName = "step3", icon = icon("cogs")),
+      menuItem("Step 4: Run Pipeline", tabName = "step4", icon = icon("upload"))
+    )),
+  dashboardBody(
+    tabItems(
+      # First tab content
+      tabItem(tabName = "step1",
+              fluidRow(
+                column(12, 
+                       fluidRow(column(12,
+                                       fileInput("samplesheet", "1) Select sample sheet ...",
+                                                 multiple = FALSE,
+                                                 accept = c("text/csv",
+                                                            "text/comma-separated-values,text/plain",
+                                                            ".csv"))
+                                       
+                       )),
+                       p(tags$b("2) Select folder containing .raw files ...")),
+                       shinyDirButton("input_folder", "Browse...", "Select raw file location..."),
+                       
+                       br(), br(),
                        fluidRow(
-                         column(8, p(tags$b("3) Select samples to be processed..."))),
-                         column(4, actionButton("check_all", "Select All"))
+                         column(12, p(tags$b("3) Select samples to be processed...")))
                        ),
                        
                        br(),
                        fluidRow(
-                         column(4, checkboxGroupInput("inCheckboxGroup", tags$b("Sample Name"))),
-                         column(8, tags$b("File Name"), br(), tableOutput("contents"))
-                       )
-                     )
-           )
+                         column(4, uiOutput("select")),
+                         column(8, textOutput('count'))
+                       ),
+                       
+                       br(),
+                       fluidRow(
+                         column(12, DT::dataTableOutput('table'))
+                       ),
+                       br(),
+                       br()
+                )
+              )
+      ),
+      
+      # Second tab content
+      tabItem(tabName = "step2",
+              fluidRow( 
+                column(12,
+                       textInput("login", "HPC username", config$login),
+                       passwordInput("password", "HPC password", ""),
+                       textInput("email", "UMC e-mail", config$email),
+                       textInput("run_name", "Run name (will be folder name on HPC)", config$run_name)
+                )
+              )
+      ),
+      tabItem(tabName = "step3",
+              fluidRow(
+                column(12,
+                       selectInput("matrix", "Matrix", config$matrix),
+                       numericInput("nrepl", "Technical replicates per sample", config$nrepl),
+                       selectInput("resol", "Mass spec resolution", config$resol, selected = config$resol[[config$default_resol]]),
+                       numericInput("trim", "Trim", config$trim),
+                       #selectInput("normalization", "Normalization", config$normalization),
+                       numericInput("dims_thresh", "Minimum intensity threshold per m/z", config$dims_thresh),
+                       numericInput("thresh2remove", "Minimum total intensity per scan", config$thresh2remove[[1]]),
+                       numericInput("thresh_pos", "Minimum intensity per positive peak", config$thresh_pos),
+                       numericInput("thresh_neg", "Minimum intensity per negative peak", config$thresh_neg),
+                       selectInput("z_score", "Calculate Z score", c("Yes" = 1, "No" = 0))
+                )
+              )
+      ),
+      tabItem(tabName = "step4",
+              fluidRow(
+                column(12, actionButton("check_button", label = "Check")),
+                br(),br(),br(),
+                column(1, textOutput("check1")),
+                column(11, p(tags$b("Selected a samplesheet."))),
+                br(),br(),
+                column(1, textOutput("check2")),
+                column(11, p(tags$b("Selected a data folder."))),
+                br(),br(),
+                column(1, textOutput("check3")),
+                column(11, p(tags$b("All selected samples were found in the data folder."))),
+                br(),br(),
+                column(1, textOutput("check4")),
+                column(11, p(tags$b("Every biological sample has the correct amount of technical replicates."))),
+                br(),br(),
+                column(1, textOutput("check5")),
+                column(11, p(tags$b("All parameters have been filled in and selected."))),
+                br(),br(),
+                column(1, textOutput("check6")),
+                column(11, p(tags$b("Can connect to the HPC submit node (and HPC credentials are correct)."))),
+                br(),br(),
+                column(1, textOutput("check7")),
+                column(11, p(tags$b("Can connect to the HPC transfer node (and HPC credentials are correct)."))),
+                br(),br(),
+                column(1, textOutput("check8")),
+                column(11, p(tags$b("There is no raw data folder with the specified run name yet."))),
+                br(),br(),
+                column(1, textOutput("check9")),
+                column(11, p(tags$b("There is no processed folder with the specified run name yet."))),
+                
+                br(),br(),br(),
+                uiOutput("run_button")
+              )
+      )
     )
   )
 )
